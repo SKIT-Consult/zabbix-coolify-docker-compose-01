@@ -43,6 +43,12 @@ services:
       mysql-server:
         condition: service_healthy
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "zabbix_server -R ha_status 2>/dev/null || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 120s
 
   zabbix-web:
     image: zabbix/zabbix-web-nginx-mysql:alpine-7.4-latest
@@ -55,7 +61,10 @@ services:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       PHP_TZ: ${PHP_TZ:-Europe/Berlin}
     depends_on:
-      - zabbix-server
+      mysql-server:
+        condition: service_healthy
+      zabbix-server:
+        condition: service_healthy
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/"]
