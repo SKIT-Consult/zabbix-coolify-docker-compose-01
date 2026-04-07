@@ -1,0 +1,64 @@
+# Zabbix Minimal Stack for Coolify
+# Components: MySQL 8.0 + Zabbix Server + Zabbix Web (Nginx)
+# No custom networks — Coolify manages networking automatically.
+# Zabbix Web listens on port 8080 — specify this port when assigning domain in Coolify.
+
+services:
+  mysql-server:
+    image: mysql:8.0-oracle
+    command:
+      - mysqld
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_bin
+      - --log-bin-trust-function-creators=1
+    environment:
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+    volumes:
+      - mysql_data:/var/lib/mysql
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD}"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  zabbix-server:
+    image: zabbix/zabbix-server-mysql:alpine-7.4-latest
+    environment:
+      DB_SERVER_HOST: mysql-server
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      ZBX_CACHESIZE: ${ZBX_CACHESIZE:-32M}
+      ZBX_STARTDBSYNCERS: ${ZBX_STARTDBSYNCERS:-2}
+    volumes:
+      - zabbix_server_alertscripts:/usr/lib/zabbix/alertscripts
+      - zabbix_server_externalscripts:/usr/lib/zabbix/externalscripts
+    depends_on:
+      mysql-server:
+        condition: service_healthy
+    restart: unless-stopped
+
+  zabbix-web:
+    image: zabbix/zabbix-web-nginx-mysql:alpine-7.4-latest
+    environment:
+      ZBX_SERVER_HOST: zabbix-server
+      DB_SERVER_HOST: mysql-server
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      PHP_TZ: ${PHP_TZ:-Europe/Berlin}
+    depends_on:
+      - zabbix-server
+    restart: unless-stopped
+
+volumes:
+  mysql_data:
+  zabbix_server_alertscripts:
+  zabbix_server_externalscripts:
