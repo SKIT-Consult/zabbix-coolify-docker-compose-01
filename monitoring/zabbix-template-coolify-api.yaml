@@ -1,0 +1,259 @@
+zabbix_export:
+  version: '7.4'
+  template_groups:
+    - uuid: 7df96b18c230490a9a0a9e2307226338
+      name: Templates/Applications
+
+  templates:
+    - uuid: b3d8f4a2c6e1954708f3b2d9e7a14c60
+      template: Coolify by HTTP
+      name: Coolify by HTTP
+      description: |
+        Monitors Coolify platform via REST API.
+
+        Setup:
+          1. Set {$COOLIFY_URL}       — base URL, e.g. https://coolify.example.com
+          2. Set {$COOLIFY_API_TOKEN} — Profile → API Tokens in Coolify UI
+
+      groups:
+        - name: Templates/Applications
+
+      macros:
+        - macro: '{$COOLIFY_URL}'
+          value: 'http://localhost:8000'
+          description: 'Coolify base URL (no trailing slash)'
+        - macro: '{$COOLIFY_API_TOKEN}'
+          value: ''
+          description: 'Coolify API token (Coolify UI → Profile → API Tokens)'
+
+      items:
+        # ── Master item: raw healthcheck response ──────────────────────────────
+        - uuid: a1f3c8d2e9b5047612e4a7f3b8c2d901
+          name: 'Coolify: healthcheck raw'
+          type: HTTP_AGENT
+          key: coolify.healthcheck.raw
+          delay: 60s
+          history: 1d
+          trends: '0'
+          value_type: TEXT
+          url: '{$COOLIFY_URL}/api/v1/healthcheck'
+          request_method: GET
+          retrieve_mode: BODY
+          status_codes: '200'
+          description: 'Raw JSON from /api/v1/healthcheck. Used as master for dependent items.'
+          tags:
+            - tag: component
+              value: api
+
+        # ── Dependent: API status string ───────────────────────────────────────
+        - uuid: b2e4d7a1f6c3085923f5b8e2a7d4c012
+          name: 'Coolify: API status'
+          type: DEPENDENT
+          key: coolify.api.status
+          delay: '0'
+          history: 7d
+          trends: '0'
+          value_type: CHAR
+          master_item:
+            key: coolify.healthcheck.raw
+          preprocessing:
+            - type: JSONPATH
+              parameters:
+                - '$.status'
+              error_handler: CUSTOM_VALUE
+              error_handler_params: 'unknown'
+          description: 'Coolify API status string (expected: "ok")'
+          tags:
+            - tag: component
+              value: api
+
+        # ── Servers count ──────────────────────────────────────────────────────
+        - uuid: c3f5e8b2a7d4196034a6c9f3b8e5d123
+          name: 'Coolify: servers count'
+          type: HTTP_AGENT
+          key: coolify.servers.count
+          delay: 5m
+          history: 30d
+          value_type: UNSIGNED
+          url: '{$COOLIFY_URL}/api/v1/servers'
+          headers:
+            - name: Authorization
+              value: 'Bearer {$COOLIFY_API_TOKEN}'
+            - name: Accept
+              value: 'application/json'
+          request_method: GET
+          status_codes: '200'
+          preprocessing:
+            - type: JAVASCRIPT
+              parameters:
+                - 'return JSON.parse(value).length;'
+          description: 'Number of servers registered in Coolify'
+          tags:
+            - tag: component
+              value: servers
+
+        # ── Applications count ─────────────────────────────────────────────────
+        - uuid: d4a6f9c3b8e5207145b7d0a4c9f6e234
+          name: 'Coolify: applications count'
+          type: HTTP_AGENT
+          key: coolify.applications.count
+          delay: 5m
+          history: 30d
+          value_type: UNSIGNED
+          url: '{$COOLIFY_URL}/api/v1/applications'
+          headers:
+            - name: Authorization
+              value: 'Bearer {$COOLIFY_API_TOKEN}'
+            - name: Accept
+              value: 'application/json'
+          request_method: GET
+          status_codes: '200'
+          preprocessing:
+            - type: JAVASCRIPT
+              parameters:
+                - 'return JSON.parse(value).length;'
+          description: 'Number of applications deployed in Coolify'
+          tags:
+            - tag: component
+              value: applications
+
+        # ── Deployments: running count ─────────────────────────────────────────
+        - uuid: e5b7a0d4c9f6318256c8e1b5d0a7f001
+          name: 'Coolify: applications running'
+          type: HTTP_AGENT
+          key: coolify.applications.running
+          delay: 2m
+          history: 30d
+          value_type: UNSIGNED
+          url: '{$COOLIFY_URL}/api/v1/applications'
+          headers:
+            - name: Authorization
+              value: 'Bearer {$COOLIFY_API_TOKEN}'
+            - name: Accept
+              value: 'application/json'
+          request_method: GET
+          status_codes: '200'
+          preprocessing:
+            - type: JAVASCRIPT
+              parameters:
+                - |
+                  var apps = JSON.parse(value);
+                  return apps.filter(function(a) {
+                    return a.status === 'running';
+                  }).length;
+          description: 'Number of applications with status=running'
+          tags:
+            - tag: component
+              value: applications
+
+        # ── Deployments: stopped/failed count ─────────────────────────────────
+        - uuid: e5b7a0d4c9f6318256c8e1b5d0a7f002
+          name: 'Coolify: applications not running'
+          type: HTTP_AGENT
+          key: coolify.applications.not_running
+          delay: 2m
+          history: 30d
+          value_type: UNSIGNED
+          url: '{$COOLIFY_URL}/api/v1/applications'
+          headers:
+            - name: Authorization
+              value: 'Bearer {$COOLIFY_API_TOKEN}'
+            - name: Accept
+              value: 'application/json'
+          request_method: GET
+          status_codes: '200'
+          preprocessing:
+            - type: JAVASCRIPT
+              parameters:
+                - |
+                  var apps = JSON.parse(value);
+                  return apps.filter(function(a) {
+                    return a.status !== 'running';
+                  }).length;
+          description: 'Number of applications NOT in running state (stopped, failed, etc.)'
+          tags:
+            - tag: component
+              value: applications
+
+      triggers:
+        - uuid: f6c8b1e5d0a7429367d9f2c6e1b8a456
+          expression: 'nodata(/Coolify by HTTP/coolify.healthcheck.raw,5m)=1'
+          name: 'Coolify: API not responding for 5 minutes'
+          priority: HIGH
+          description: |
+            No data from Coolify API healthcheck for 5 minutes.
+            Check if Coolify container/service is running.
+          tags:
+            - tag: scope
+              value: availability
+
+        - uuid: a7d9c2f6e1b8540478e0a3d7f2c9b567
+          expression: 'last(/Coolify by HTTP/coolify.api.status)<>"ok"'
+          name: 'Coolify: API status is not "ok"'
+          priority: AVERAGE
+          description: 'Coolify API returned status other than "ok".'
+          tags:
+            - tag: scope
+              value: availability
+
+        - uuid: b8e0d3a7f2c9651589f1b4e8a3d0c678
+          expression: 'last(/Coolify by HTTP/coolify.applications.not_running)>0'
+          name: 'Coolify: {ITEM.VALUE} application(s) not running'
+          priority: WARNING
+          description: |
+            One or more Coolify applications are not in running state.
+            Check Coolify UI for details.
+          tags:
+            - tag: scope
+              value: availability
+
+      dashboards:
+        - uuid: c9f1e4b8a3d0762690a2c5f9b4e1d789
+          name: Coolify Overview
+          pages:
+            - name: Overview
+              widgets:
+                - type: item
+                  width: '8'
+                  height: '4'
+                  fields:
+                    - type: ITEM
+                      name: itemid
+                      value:
+                        host: Coolify by HTTP
+                        key: coolify.api.status
+                - type: item
+                  x: '8'
+                  width: '8'
+                  height: '4'
+                  fields:
+                    - type: ITEM
+                      name: itemid
+                      value:
+                        host: Coolify by HTTP
+                        key: coolify.applications.count
+                - type: item
+                  x: '16'
+                  width: '8'
+                  height: '4'
+                  fields:
+                    - type: ITEM
+                      name: itemid
+                      value:
+                        host: Coolify by HTTP
+                        key: coolify.applications.running
+                - type: graph
+                  'y': '4'
+                  width: '24'
+                  height: '8'
+                  fields:
+                    - type: ITEM
+                      name: itemid.0
+                      value:
+                        host: Coolify by HTTP
+                        key: coolify.applications.running
+                    - type: ITEM
+                      name: itemid.1
+                      value:
+                        host: Coolify by HTTP
+                        key: coolify.applications.not_running
