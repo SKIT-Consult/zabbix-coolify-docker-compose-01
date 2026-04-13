@@ -1,0 +1,134 @@
+[
+  {
+    "serviceid": "1",
+    "name": "n8n",
+    "status": "-1",
+    "algorithm": "1",
+    "sortorder": "0",
+    "weight": "0",
+    "propagation_rule": "0",
+    "propagation_value": "0",
+    "description": "",
+    "uuid": "1370699306fe4d9bb6975476da4f27c2",
+    "created_at": "1775668399",
+    "readonly": false,
+    "tags": [],
+    "problem_tags": [
+      {
+        "tag": "service",
+        "operator": "0",
+        "value": "n8n"
+      }
+    ]
+  },
+  {
+    "serviceid": "2",
+    "name": "Mautic",
+    "status": "-1",
+    "algorithm": "1",
+    "sortorder": "1",
+    "weight": "0",
+    "propagation_rule": "0",
+    "propagation_value": "0",
+    "description": "",
+    "uuid": "05d6685cdfa847119a2501834937f27e",
+    "created_at": "1776061995",
+    "readonly": false,
+    "tags": [],
+    "problem_tags": [
+      {
+        "tag": "service",
+        "operator": "0",
+        "value": "mautic"
+      }
+    ]
+  },
+  {
+    "serviceid": "3",
+    "name": "Soul Journeys Website",
+    "status": "-1",
+    "algorithm": "1",
+    "sortorder": "2",
+    "weight": "0",
+    "propagation_rule": "0",
+    "propagation_value": "0",
+    "description": "",
+    "uuid": "e50c62ea6eac4d76a46f52d454d08d89",
+    "created_at": "1776061996",
+    "readonly": false,
+    "tags": [],
+    "problem_tags": [
+      {
+        "tag": "service",
+        "operator": "0",
+        "value": "website"
+      }
+    ]
+  },
+  {
+    "serviceid": "4",
+    "name": "Uptime Kuma",
+    "status": "-1",
+    "algorithm": "1",
+    "sortorder": "3",
+    "weight": "0",
+    "propagation_rule": "0",
+    "propagation_value": "0",
+    "description": "",
+    "uuid": "8478d4e6490a409b810c004ec4f4afb8",
+    "created_at": "1776061996",
+    "readonly": false,
+    "tags": [],
+    "problem_tags": [
+      {
+        "tag": "service",
+        "operator": "0",
+        "value": "uptime-kuma"
+      }
+    ]
+  },
+  {
+    "serviceid": "5",
+    "name": "Coolify",
+    "status": "-1",
+    "algorithm": "1",
+    "sortorder": "4",
+    "weight": "0",
+    "propagation_rule": "0",
+    "propagation_value": "0",
+    "description": "",
+    "uuid": "ac3e87e84e3b4e50b882f81844267104",
+    "created_at": "1776061996",
+    "readonly": false,
+    "tags": [],
+    "problem_tags": [
+      {
+        "tag": "component",
+        "operator": "0",
+        "value": "api"
+      }
+    ]
+  },
+  {
+    "serviceid": "6",
+    "name": "Zabbix",
+    "status": "-1",
+    "algorithm": "1",
+    "sortorder": "5",
+    "weight": "0",
+    "propagation_rule": "0",
+    "propagation_value": "0",
+    "description": "",
+    "uuid": "4d99d8b5b52445bca28a0d12063bbb38",
+    "created_at": "1776061996",
+    "readonly": false,
+    "tags": [],
+    "problem_tags": [
+      {
+        "tag": "scope",
+        "operator": "0",
+        "value": "availability"
+      }
+    ]
+  }
+]

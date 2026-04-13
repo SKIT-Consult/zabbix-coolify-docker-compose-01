@@ -1,0 +1,14 @@
+[
+  {
+    "mediatypeid": "1",
+    "name": "Email",
+    "type": "0",
+    "status": "0",
+    "smtp_server": "in-v3.mailjet.com",
+    "smtp_port": "587",
+    "smtp_email": "mailings@souljourneys.space",
+    "smtp_helo": "souljourneys.space",
+    "smtp_security": "1",
+    "smtp_authentication": "1"
+  }
+]

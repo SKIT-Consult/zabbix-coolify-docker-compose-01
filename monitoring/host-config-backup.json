@@ -1,0 +1,131 @@
+{
+  "hostid": "10777",
+  "proxyid": "0",
+  "host": "sjops.souljourneys.space",
+  "status": "0",
+  "ipmi_authtype": "-1",
+  "ipmi_privilege": "2",
+  "ipmi_username": "",
+  "ipmi_password": "",
+  "maintenanceid": "0",
+  "maintenance_status": "0",
+  "maintenance_type": "0",
+  "maintenance_from": "0",
+  "name": "sjops.souljourneys.space",
+  "flags": "0",
+  "templateid": "0",
+  "description": "",
+  "tls_connect": "1",
+  "tls_accept": "1",
+  "tls_issuer": "",
+  "tls_subject": "",
+  "custom_interfaces": "0",
+  "uuid": "",
+  "vendor_name": "",
+  "vendor_version": "",
+  "proxy_groupid": "0",
+  "monitored_by": "0",
+  "wizard_ready": "0",
+  "readme": "",
+  "inventory_mode": "-1",
+  "active_available": "1",
+  "assigned_proxyid": "0",
+  "parentTemplates": [
+    {
+      "templateid": "10318",
+      "name": "Docker by Zabbix agent 2"
+    },
+    {
+      "templateid": "10320",
+      "name": "MySQL by Zabbix agent 2"
+    },
+    {
+      "templateid": "10343",
+      "name": "Linux by Zabbix agent active"
+    },
+    {
+      "templateid": "10413",
+      "name": "Website certificate by Zabbix agent 2"
+    },
+    {
+      "templateid": "10778",
+      "name": "Coolify by HTTP"
+    }
+  ],
+  "macros": [
+    {
+      "hostmacroid": "8198",
+      "macro": "{$CERT.EXPIRY.WARN}",
+      "value": "30",
+      "type": "0",
+      "description": "",
+      "automatic": "0"
+    },
+    {
+      "hostmacroid": "8197",
+      "macro": "{$CERT.WEBSITE.HOSTNAME}",
+      "value": "souljourneys.space,n8nops.souljourneys.space,maut.souljourneys.space,mania.souljourneys.space,upc.souljourneys.space,sjops.souljourneys.space",
+      "type": "0",
+      "description": "",
+      "automatic": "0"
+    },
+    {
+      "hostmacroid": "8196",
+      "macro": "{$COOLIFY_API_TOKEN}",
+      "value": "2|DLuwOwYgYu3LMGn821jMbblHFtwjG8yYDGCuOs0K3fe9b2c3",
+      "type": "0",
+      "description": "",
+      "automatic": "0"
+    },
+    {
+      "hostmacroid": "8195",
+      "macro": "{$COOLIFY_URL}",
+      "value": "http://host.docker.internal:8000",
+      "type": "0",
+      "description": "",
+      "automatic": "0"
+    },
+    {
+      "hostmacroid": "8199",
+      "macro": "{$MYSQL.DSN}",
+      "value": "tcp://127.0.0.1:3306",
+      "type": "0",
+      "description": "",
+      "automatic": "0"
+    },
+    {
+      "hostmacroid": "8201",
+      "macro": "{$MYSQL.PASSWORD}",
+      "value": "ZabbixMon2026!",
+      "type": "0",
+      "description": "",
+      "automatic": "0"
+    },
+    {
+      "hostmacroid": "8200",
+      "macro": "{$MYSQL.USER}",
+      "value": "zbx_monitor",
+      "type": "0",
+      "description": "",
+      "automatic": "0"
+    }
+  ],
+  "interfaces": [
+    {
+      "interfaceid": "81",
+      "hostid": "10777",
+      "main": "1",
+      "type": "1",
+      "useip": "1",
+      "ip": "10.0.7.1",
+      "dns": "host.docker.internal",
+      "port": "10050",
+      "available": "1",
+      "error": "",
+      "errors_from": "0",
+      "disable_until": "0",
+      "details": []
+    }
+  ],
+  "tags": []
+}
