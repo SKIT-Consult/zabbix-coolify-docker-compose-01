@@ -1,83 +1,100 @@
-# Zabbix on Coolify — Deployment Guide
+# Zabbix on Coolify — Docker Compose Stack
 
-## What's included
-- MySQL 8.0 (database)
-- Zabbix Server 7.4 (monitoring engine)
-- Zabbix Web Nginx 7.4 (web interface, port 8080)
+Docker Compose configuration for running Zabbix 7.4 monitoring stack on Coolify.
 
-## What's NOT included (by design)
-- Zabbix Agent — install on host separately (see below)
-- Zabbix Proxy — not needed for single-server setup
-- Java Gateway — not needed unless monitoring JMX
-- SNMP Traps — not needed for this use case
+## Components
+
+| Service | Image | Purpose | Port |
+|---|---|---|---|
+| `mysql-server` | `mysql:8.0-oracle` | Database backend | 3306 (localhost only) |
+| `zabbix-server` | `zabbix/zabbix-server-mysql:alpine-7.4-latest` | Monitoring engine | 10051 (agent trapper) |
+| `zabbix-web` | `zabbix/zabbix-web-nginx-mysql:alpine-7.4-latest` | Web interface | 8080 (HTTP) |
+
+## Key configuration details
+
+### Networking
+- `extra_hosts: host.docker.internal:host-gateway` on zabbix-server — allows server to reach the host machine (for Zabbix Agent 2 and Coolify API)
+- `ports: 10051:10051` on zabbix-server — allows host-installed Zabbix Agent 2 to send data to the server
+- `ports: 127.0.0.1:3306:3306` on mysql-server — allows host-installed Agent 2 to monitor MySQL (localhost only, not exposed externally)
+- No custom Docker networks — Coolify manages networking automatically
+- Zabbix Web listens on port 8080 — assign domain in Coolify pointing to this port
+
+### Volumes
+- `mysql_data` — persistent MySQL storage (survives redeployments)
+- `zabbix_server_alertscripts` — custom alert scripts
+- `zabbix_server_externalscripts` — external check scripts
 
 ## Deploy via Coolify
 
-### Option A: Docker Compose Empty (fastest)
-1. Coolify → Project → New Resource → Docker Compose Empty
-2. Paste contents of `docker-compose.yml` into the editor
-3. Add environment variables from `.env.example` (change passwords!)
+1. Coolify > Project > New Resource > Docker Compose (or Git Repository)
+2. Paste/link `docker-compose.yaml`
+3. Set environment variables from `.env.example` (**change all passwords!**)
 4. Assign domain to `zabbix-web` service with port `8080`
 5. Deploy
 
-### Option B: Git Repository (versioned)
-1. Push this folder to a public Git repo
-2. Coolify → Project → New Resource → Public Repository
-3. Paste repo URL
-4. Build Pack → Docker Compose
-5. Add environment variables from `.env.example` (change passwords!)
-6. Assign domain to `zabbix-web` service with port `8080`
-7. Deploy
+## Environment variables
 
-## After deployment
-1. Open assigned domain in browser
-2. Login: `Admin` / `zabbix`
-3. **Change default password immediately**
-4. Check: Administration → System Information → Zabbix server is running = Yes
+See `.env.example` for the full list. Required:
 
-## Zabbix Agent 2 (host-level, outside Coolify)
+| Variable | Description |
+|---|---|
+| `MYSQL_DATABASE` | Database name (default: `zabbix`) |
+| `MYSQL_USER` | Database user |
+| `MYSQL_PASSWORD` | Database password (**change!**) |
+| `MYSQL_ROOT_PASSWORD` | MySQL root password (**change!**) |
+| `PHP_TZ` | Web UI timezone (default: `Europe/Berlin`) |
+| `ZBX_CACHESIZE` | Zabbix server cache size (default: `32M`) |
 
-Agent2 runs directly on the server, not inside Coolify.
+## Zabbix Agent 2 (host-level)
+
+Agent 2 runs directly on the server, **not** inside Docker. It provides CPU/RAM/disk metrics, Docker container monitoring, and MySQL monitoring.
+
+### Installation (Ubuntu 24.04)
 
 ```bash
-# Add Zabbix repository (Ubuntu/Debian)
+# Add Zabbix repo
 wget https://repo.zabbix.com/zabbix/7.4/release/ubuntu/pool/main/z/zabbix-release/zabbix-release_latest_7.4+ubuntu$(lsb_release -rs)_all.deb
 sudo dpkg -i zabbix-release_latest_7.4+ubuntu$(lsb_release -rs)_all.deb
 sudo apt update
-
-# Install agent2
-sudo apt install zabbix-agent2 zabbix-agent2-plugin-*
-
-# Configure
-sudo nano /etc/zabbix/zabbix_agent2.conf
-# Set:
-#   Server=<zabbix-server-container-IP-or-name>
-#   ServerActive=<zabbix-server-container-IP-or-name>
-#   Hostname=<your-server-hostname>
-
-# Enable Docker monitoring (agent2 needs Docker socket access)
-sudo usermod -aG docker zabbix
-sudo systemctl restart zabbix-agent2
-sudo systemctl enable zabbix-agent2
+sudo apt install -y zabbix-agent2 zabbix-agent2-plugin-*
 ```
 
-### Connecting agent2 to Zabbix Server container
+### Configuration (`/etc/zabbix/zabbix_agent2.conf`)
 
-The agent2 on the host needs to reach the Zabbix Server container.
-Two options:
+```ini
+ServerActive=127.0.0.1:10051
+Server=127.0.0.1,10.0.0.0/8,172.0.0.0/8
+Hostname=sjops.souljourneys.space
+Plugins.Docker.Endpoint=unix:///var/run/docker.sock
+LogFile=/var/log/zabbix/zabbix_agent2.log
+LogFileSize=5
+```
 
-**Option 1 (simple):** Find zabbix-server container IP:
+**Key points:**
+- `Server` includes `10.0.0.0/8` — Coolify uses this subnet for container networking
+- `Hostname` must match the host technical name in Zabbix UI
+- Docker socket access required for container monitoring
+
+### Enable and start
+
 ```bash
-docker inspect -f '{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}' <zabbix-server-container-name>
+sudo usermod -aG docker zabbix
+sudo systemctl enable zabbix-agent2
+sudo systemctl restart zabbix-agent2
 ```
-Use this IP in agent2 config. Note: IP may change on redeploy.
 
-**Option 2 (stable):** Enable "Connect to Predefined Network" on the Zabbix stack in Coolify.
-Then agent2 can reach zabbix-server via the Coolify predefined network.
-The container name will include a UUID suffix — check with `docker ps`.
+## After deployment
 
-## Notes
-- `log-bin-trust-function-creators=1` is required for MySQL with Zabbix 6.0+
-- No custom Docker networks declared — Coolify handles networking
-- Volumes persist MySQL data across redeployments
-- Port 10051 is NOT exposed externally — only used internally between agent and server
+1. Open assigned domain in browser
+2. Login: `Admin` / `zabbix` → **change password immediately**
+3. Verify: Administration > System Information > "Zabbix server is running" = Yes
+4. Create host with interface IP `10.0.7.1` (Docker gateway to host) port `10050`
+5. Link templates: Linux by Zabbix agent active, Docker by Zabbix agent 2
+
+## Related repositories
+
+| Repo | Description |
+|---|---|
+| [sj-monitoring](https://github.com/SKIT-Consult/sj-monitoring) | Zabbix configuration backups, dashboards, templates, research |
+| [sj-n8n-backups](https://github.com/SKIT-Consult/sj-n8n-backups) | n8n workflow JSON exports |
+| [sj-apple-apps](https://github.com/SKIT-Consult/sj-apple-apps) | macOS automation scripts for content production |
